@@ -4,20 +4,15 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const http = require('http');
 
-// Simple HTTP server to keep Render alive
+// سيرفر ويب لإبقاء الخدمة تعمل بنجاح على Render
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot is Active\n');
+  res.end('Tehama Blood Bot is Online\n');
 });
-
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+server.listen(process.env.PORT || 10000);
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-    
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: true,
@@ -30,20 +25,19 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) { 
-            console.log("------------------- QR CODE START -------------------");
+            // طباعة رابط الكود لفتحه يدوياً في حال لم يظهر المربع
+            console.log("--------------------------------------------------");
+            console.log("رابط مسح الكود (افتحه في المتصفح):");
+            console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
+            console.log("--------------------------------------------------");
             qrcode.generate(qr, { small: true }); 
-            console.log("\nFallback QR URL:");
-            console.log("https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(qr));
-            console.log("-------------------- QR CODE END --------------------");
         }
         
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) {
-                connectToWhatsApp();
-            }
+            if (shouldReconnect) connectToWhatsApp();
         } else if (connection === 'open') {
-            console.log('Bot Connected Successfully!');
+            console.log('✅ تم الاتصال بنجاح - بوت بنك تهامة يعمل الآن');
         }
     });
 
@@ -58,16 +52,13 @@ async function connectToWhatsApp() {
                     const params = new URLSearchParams();
                     params.append('type', text);
                     params.append('api_key', 'Tehama_2026_Secure');
-
-                    // Make sure this URL matches your bot_api.php location
                     const response = await axios.post('https://b-d.ct.ws/bot_api.php', params);
                     await sock.sendMessage(from, { text: response.data });
                 } catch (error) {
-                    console.log('API connection error');
+                    console.log('Error fetching data from InfinityFree');
                 }
             }
         }
     });
 }
-
 connectToWhatsApp();
