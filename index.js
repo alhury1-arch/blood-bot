@@ -4,15 +4,19 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const http = require('http');
 
-// إنشاء سيرفر بسيط لإبقاء منصة Render متصلة
+// إنشاء سيرفر ويب بسيط لإقناع Render بأن الخدمة تعمل بنجاح
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot is Active\n');
+  res.end('Blood Bank Bot is Running...\n');
 });
-server.listen(process.env.PORT || 10000);
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+    
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: true,
@@ -25,12 +29,13 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) { 
-            // الرابط الذي سيحل المشكلة: سيظهر في السجلات بوضوح
-            console.log("\n--- رابط مسح كود الواتساب (افتح الرابط التالي في المتصفح) ---");
+            // هذا الرابط هو الحل: سيظهر في السجلات، انسخه وافتحه في المتصفح
+            console.log("\n\n==================================================");
+            console.log("رابط كود الواتساب (انسخه وافتحه في المتصفح):");
             console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
-            console.log("-----------------------------------------------------------\n");
+            console.log("==================================================\n\n");
             
-            // محاولة عرض الكود الرسومي أيضاً
+            // محاولة عرض الكود في السجل أيضاً
             qrcode.generate(qr, { small: true }); 
         }
         
@@ -38,7 +43,7 @@ async function connectToWhatsApp() {
             const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) connectToWhatsApp();
         } else if (connection === 'open') {
-            console.log('✅ تم الاتصال بنجاح - بوت بنك تهامة جاهز للعمل!');
+            console.log('✅ تم الاتصال بنجاح - بوت بنك تهامة يعمل الآن');
         }
     });
 
@@ -48,16 +53,17 @@ async function connectToWhatsApp() {
             let text = msg.message.conversation.trim().toUpperCase();
             const from = msg.key.remoteJid;
 
-            // التحقق من فصائل الدم بناءً على قاعدة بياناتك
+            // التحقق من فصيلة الدم (مثلاً A+ أو O-)
             if (/^(A|B|AB|O)[+-]$/i.test(text)) {
                 try {
                     const params = new URLSearchParams();
                     params.append('type', text);
                     params.append('api_key', 'Tehama_2026_Secure');
+
                     const response = await axios.post('https://b-d.ct.ws/bot_api.php', params);
                     await sock.sendMessage(from, { text: response.data });
                 } catch (error) {
-                    console.log('خطأ في الاتصال بقاعدة البيانات');
+                    await sock.sendMessage(from, { text: '❌ حدث خطأ في الاتصال بقاعدة البيانات.' });
                 }
             }
         }
