@@ -4,10 +4,10 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const http = require('http');
 
-// سيرفر ويب لإبقاء الخدمة تعمل بنجاح على Render
+// إنشاء سيرفر بسيط لإبقاء منصة Render متصلة
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Tehama Blood Bot is Online\n');
+  res.end('Bot is Active\n');
 });
 server.listen(process.env.PORT || 10000);
 
@@ -25,11 +25,12 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) { 
-            // طباعة رابط الكود لفتحه يدوياً في حال لم يظهر المربع
-            console.log("--------------------------------------------------");
-            console.log("رابط مسح الكود (افتحه في المتصفح):");
+            // الرابط الذي سيحل المشكلة: سيظهر في السجلات بوضوح
+            console.log("\n--- رابط مسح كود الواتساب (افتح الرابط التالي في المتصفح) ---");
             console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
-            console.log("--------------------------------------------------");
+            console.log("-----------------------------------------------------------\n");
+            
+            // محاولة عرض الكود الرسومي أيضاً
             qrcode.generate(qr, { small: true }); 
         }
         
@@ -37,7 +38,7 @@ async function connectToWhatsApp() {
             const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) connectToWhatsApp();
         } else if (connection === 'open') {
-            console.log('✅ تم الاتصال بنجاح - بوت بنك تهامة يعمل الآن');
+            console.log('✅ تم الاتصال بنجاح - بوت بنك تهامة جاهز للعمل!');
         }
     });
 
@@ -47,6 +48,7 @@ async function connectToWhatsApp() {
             let text = msg.message.conversation.trim().toUpperCase();
             const from = msg.key.remoteJid;
 
+            // التحقق من فصائل الدم بناءً على قاعدة بياناتك
             if (/^(A|B|AB|O)[+-]$/i.test(text)) {
                 try {
                     const params = new URLSearchParams();
@@ -55,7 +57,7 @@ async function connectToWhatsApp() {
                     const response = await axios.post('https://b-d.ct.ws/bot_api.php', params);
                     await sock.sendMessage(from, { text: response.data });
                 } catch (error) {
-                    console.log('Error fetching data from InfinityFree');
+                    console.log('خطأ في الاتصال بقاعدة البيانات');
                 }
             }
         }
